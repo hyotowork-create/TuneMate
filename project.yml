@@ -1,0 +1,59 @@
+# XcodeGen 프로젝트 정의 — Xcode 가 설치된 Mac 에서:  brew install xcodegen && xcodegen generate
+# 생성된 TuneMate.xcodeproj 를 열면 iPhone·iPad·Mac 타깃이 모두 들어 있다 (SwiftUI 멀티플랫폼 단일 코드).
+name: TuneMate
+options:
+  bundleIdPrefix: app.tunemate
+  deploymentTarget:
+    iOS: "17.0"
+    macOS: "14.0"
+  xcodeVersion: "16.0"
+  createIntermediateGroups: true
+packages:
+  TuneMateCore:
+    path: .
+settings:
+  base:
+    SWIFT_VERSION: "5.10"
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    DEVELOPMENT_TEAM: ""     # Apple 개발자 계정 Team ID (TestFlight 배포 시)
+targets:
+  TuneMate:
+    type: application
+    platform: [iOS, macOS]
+    sources:
+      - path: Sources/TuneMateApp
+        excludes: ["main.swift"]
+    dependencies:
+      - package: TuneMateCore
+        product: TuneMateCore
+    info:
+      path: Resources/Info.plist
+      properties:
+        CFBundleDisplayName: 튠메이트
+        NSMicrophoneUsageDescription: 예배당 음향 측정과 하울링 검출을 위해 측정마이크 입력을 사용합니다.
+        NSLocalNetworkUsageDescription: 같은 네트워크의 디지털 믹서(DM24.8, X32, XR18, Yamaha DM)를 찾고 제어합니다.
+        NSBonjourServices: ["_osc._udp", "_http._tcp", "_tunemate._tcp", "_tunemate._udp"]
+        UIBackgroundModes: [audio]
+        UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
+        UISupportedInterfaceOrientations~ipad: [UIInterfaceOrientationPortrait, UIInterfaceOrientationPortraitUpsideDown, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
+        LSApplicationCategoryType: public.app-category.music
+        ITSAppUsesNonExemptEncryption: false
+    entitlements:
+      path: Resources/TuneMate.entitlements
+      properties:
+        com.apple.security.app-sandbox: true
+        com.apple.security.network.client: true
+        com.apple.security.network.server: true
+        com.apple.security.device.audio-input: true
+        com.apple.security.files.user-selected.read-write: true
+        # iOS 에서 UDP 브로드캐스트(/xinfo 믹서 탐색)에 필요. Apple 에 권한 신청 후 켠다.
+        # com.apple.developer.networking.multicast: true
+        keychain-access-groups: ["$(AppIdentifierPrefix)app.tunemate.apikeys"]
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: app.tunemate.TuneMate
+        TARGETED_DEVICE_FAMILY: "1,2"
+        SUPPORTS_MACCATALYST: false
+# 테스트는 SwiftPM 으로 돌린다 (`swift test`). Xcode 에서는 Package 의 TuneMateCoreTests 를 Test Navigator 에서 실행.
+# (bundle.unit-test 타깃은 호스트 없는 macOS 러너가 준비 단계에서 시간 초과해 제외)

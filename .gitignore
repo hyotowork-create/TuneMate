@@ -1,0 +1,21 @@
+# SwiftPM / Xcode 산출물
+.build/
+DerivedData/
+*.xcodeproj/
+*.xcworkspace/
+xcuserdata/
+*.xcuserstate
+.swiftpm/
+Package.resolved
+
+# 로컬 환경
+.DS_Store
+*.log
+.env
+.claude/launch.json
+dist/
+
+# 비밀값·개인 설정 (API 키는 Keychain 에만 둔다)
+*.p12
+*.mobileprovision
+*.cer
