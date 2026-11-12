@@ -14,8 +14,8 @@ packages:
 settings:
   base:
     SWIFT_VERSION: "5.10"
-    MARKETING_VERSION: "0.1.0"
-    CURRENT_PROJECT_VERSION: "1"
+    MARKETING_VERSION: "0.1.1"
+    CURRENT_PROJECT_VERSION: "2"
     DEVELOPMENT_TEAM: ""     # Apple 개발자 계정 Team ID (TestFlight 배포 시)
 targets:
   TuneMate:

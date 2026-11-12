@@ -62,6 +62,13 @@ TEAM_ID=XXXXXXXXXX scripts/install-ios.sh
 ```
 무료 Apple ID 로도 됩니다(7일마다 재설치, 기기당 앱 3개). Team ID 는 Xcode → Settings → Accounts 에서 확인. `TEAM_ID` 없이 실행하면 Xcode 를 열고 수동 절차를 안내합니다. 번들 ID 충돌 시 `BUNDLE_ID=kr.본인.tunemate` 추가. iOS 는 한국에서 웹 다운로드 설치가 불가하며, 여러 사람에게 배포하려면 TestFlight(유료 개발자 계정) 또는 App Store 를 씁니다.
 
+**내려받기용 dmg 만들기 (배포하는 사람용)**
+
+```bash
+scripts/make-dmg.sh
+```
+유니버설 Release 빌드를 임시 서명해 `dist/TuneMate-mac.dmg` 로 만듭니다. 릴리스에 올리는 dmg 는 이 스크립트로 만든 것입니다.
+
 **개발 환경 준비**
 
 ```bash
