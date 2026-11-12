@@ -11,7 +11,7 @@ struct TuneMateApp: App {
                 .environmentObject(model)
                 .environment(\.locale, Locale(identifier: "ko_KR"))
                 .task { await model.load() }
-                .sheet(item: $model.pendingApproval) { p in ApprovalSheet(pending: p).environmentObject(model) }
+                .sheet(item: $model.pendingApproval, onDismiss: { model.approvalSheetDismissed() }) { p in ApprovalSheet(pending: p).environmentObject(model) }
         }
         #if os(macOS)
         .defaultSize(width: 1120, height: 760)

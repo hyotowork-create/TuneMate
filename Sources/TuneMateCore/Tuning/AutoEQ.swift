@@ -77,7 +77,10 @@ public enum AutoEQ {
             notes.append(String(format: "%.0f–%.0f Hz 깊은 딥은 EQ로 채우지 않습니다 (방 구조·스피커 위치 점검 대상).", d.lowerBound, d.upperBound))
         }
 
-        let initialRMS = rms(error, mask: mask)
+        // 평가 구간(범위 안 + 딥·어깨 제외)은 필터 배정 중에 줄어드는 선택용 mask 와 따로 둔다.
+        // 적용 전·후 RMS 와 검증 루프의 실측 잔차가 모두 이 같은 구간으로 계산되어야 숫자를 비교할 수 있다.
+        let evalMask = mask
+        let initialRMS = rms(error, mask: evalMask)
         var filters: [EQFilter] = []
         let ppo = measured.pointsPerOctave
 
@@ -132,12 +135,22 @@ public enum AutoEQ {
 
         filters.sort { $0.frequencyHz < $1.frequencyHz }
         let predicted = measured.adding(EQFilter.combinedResponse(filters, on: grid))
-        let residual = rms(predicted.subtracting(targetResp).magnitudesDB, mask: mask)
+        let residual = rms(predicted.subtracting(targetResp).magnitudesDB, mask: evalMask)
         if filters.contains(where: { $0.gainDB >= options.maxBoostDB - 0.05 }) {
             notes.append("부스트 한도(+\(Int(options.maxBoostDB)) dB)에 닿은 밴드가 있습니다. 부족한 대역은 스피커 배치로 보는 편이 안전합니다.")
         }
         return AutoEQResult(filters: filters, measured: measured, target: targetResp, predicted: predicted,
                             residualRMSDB: residual, initialRMSDB: initialRMS, excludedDips: excluded, notes: notes)
+    }
+
+    /// 잔차를 계산하는 구간: 보정 범위 안이면서, 제외한 딥과 그 어깨(dipMarginOctaves)가 아닌 곳.
+    /// `compute` 가 쓰는 평가 구간과 같다 — 검증 루프가 같은 기준으로 실측 잔차를 내도록 공개한다.
+    public static func evaluationMask(grid: [Double], options: AutoEQOptions, excludedDips: [ClosedRange<Double>]) -> [Bool] {
+        let margin = pow(2, options.dipMarginOctaves)
+        return grid.map { f in
+            guard f >= options.minFrequencyHz && f <= options.maxFrequencyHz else { return false }
+            return !excludedDips.contains { f >= $0.lowerBound / margin && f <= $0.upperBound * margin }
+        }
     }
 
     private static func clampGain(_ g: Double, _ o: AutoEQOptions) -> Double { min(o.maxBoostDB, max(o.maxCutDB, g)) }

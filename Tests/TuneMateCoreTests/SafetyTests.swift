@@ -49,6 +49,24 @@ struct SafetyTests {
         _ = drv
     }
 
+    /// 믹서 메인 EQ(시뮬레이터 4밴드)에 없는 5·6밴드를 쓰는 변경안은 통째로 막고, 앞 밴드도 건드리지 않는다.
+    @Test func eqBandBeyondMixerBandCountIsDeniedWithoutPartialWrite() async throws {
+        let (ex, drv) = try await makeExecutor(mode: .rehearsalAuto)
+        let before = try await drv.snapshot()
+        let have = before.eq(of: .mainLR)?.count ?? 0
+        #expect(have == 4)
+        let changes: [MixerChange] = (1...6).map { .eqBand(target: .mainLR, band: $0, frequencyHz: 100 * Double($0), gainDB: -2, q: 2, on: true) }
+        let out = try await ex.submit(ChangeProposal(source: .autoEQ, rationale: "6밴드", changes: changes), approved: true)
+        guard case .denied(let reasons) = out else { Issue.record("expected denied, got \(out)"); return }
+        #expect(reasons.count == 1)
+        #expect(reasons[0].contains("4밴드") && reasons[0].contains("6밴드"))
+        let after = try await drv.snapshot()
+        #expect(after.eq(of: .mainLR) == before.eq(of: .mainLR))
+        // 밴드 수 안이면 그대로 적용된다.
+        let ok = try await ex.submit(ChangeProposal(source: .autoEQ, rationale: "4밴드", changes: Array(changes.prefix(4))), approved: true)
+        guard case .applied = ok else { Issue.record("expected applied, got \(ok)"); return }
+    }
+
     @Test func undoRestoresSnapshot() async throws {
         let (ex, drv) = try await makeExecutor(mode: .rehearsalAuto)
         let before = try await drv.snapshot()

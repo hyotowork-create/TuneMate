@@ -13,6 +13,29 @@ struct LoopTests {
         #expect(r < 0.1); #expect(it.verifiedRMSDB != nil)
     }
 
+    /// 깊은 딥이 있는 방: 보정이 그대로 들어갔다면 실측 잔차가 예상 잔차와 같아야 하고(같은 평가 구간), 수렴으로 판정해야 한다.
+    /// 예전에는 검증만 딥 구간을 포함해 '예상 0.8 dB / 실측 1.9 dB' 처럼 숫자가 어긋났다.
+    @Test func verifiedResidualMatchesPredictedWhenRoomHasDeepDip() {
+        let grid = FrequencyResponse.logGrid()
+        let roomFilters = [EQFilter(frequencyHz: 63, gainDB: 7, q: 3), EQFilter(frequencyHz: 180, gainDB: -14, q: 4), EQFilter(frequencyHz: 2_500, gainDB: 3.5, q: 1.5)]
+        let room = FrequencyResponse(frequencies: grid, magnitudesDB: grid.map { f in 70 + roomFilters.reduce(0) { $0 + $1.magnitudeDB(at: f) } })
+        var opt = AutoEQOptions(); opt.maxFilters = 4
+        let r = AutoEQ.compute(response: room, target: .flat, options: opt)
+        #expect(!r.excludedDips.isEmpty)
+        #expect(r.residualRMSDB < r.initialRMSDB)
+        // 믹서에 보정이 그대로 적용된 뒤의 재측정 = 방 응답 + 필터
+        let after = room.adding(EQFilter.combinedResponse(r.filters, on: grid))
+        var it = TuningIteration(index: 1, filters: r.filters, predictedRMSDB: r.residualRMSDB)
+        let v = TuningLoop.verify(iteration: &it, verified: after, target: .flat, predicted: r.predicted, autoEQ: opt, excludedDips: r.excludedDips, previous: nil, options: TuningLoopOptions())
+        #expect(abs((it.verifiedRMSDB ?? 99) - r.residualRMSDB) < 0.3)
+        #expect((it.predictionErrorRMSDB ?? 99) < 0.3)
+        guard case .converged = v else { Issue.record("expected converged, got \(v)"); return }
+        // 딥 구간을 넘기지 않으면(예전 동작) 딥이 잔차에 들어가 더 크게 나온다
+        var it2 = TuningIteration(index: 1, filters: r.filters, predictedRMSDB: r.residualRMSDB)
+        _ = TuningLoop.verify(iteration: &it2, verified: after, target: .flat, predicted: r.predicted, autoEQ: opt, previous: nil, options: TuningLoopOptions())
+        #expect((it2.verifiedRMSDB ?? 0) > (it.verifiedRMSDB ?? 0) + 0.3)
+    }
+
     @Test func verifyFlagsPredictionMismatchAndStall() {
         let grid = FrequencyResponse.logGrid()
         let peak = EQFilter(frequencyHz: 250, gainDB: 12, q: 2)

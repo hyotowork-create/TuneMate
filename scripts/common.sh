@@ -20,7 +20,8 @@ need_xcode() {
   if [[ -z "$dev" || "$dev" == *CommandLineTools* ]]; then
     die "Xcode 가 필요합니다. App Store 에서 Xcode 를 설치한 뒤 한 번 실행하고, 'sudo xcode-select -s /Applications/Xcode.app' 을 실행하세요."
   fi
-  xcodebuild -version | head -1
+  # `| head -1` 은 쓰지 않는다: head 가 먼저 끝나면 xcodebuild 가 SIGPIPE 로 죽고 pipefail 이 스크립트를 멈춘다.
+  local v; v="$(xcodebuild -version)"; printf '%s\n' "${v%%$'\n'*}"
 }
 
 need_xcodegen() {
@@ -29,7 +30,7 @@ need_xcodegen() {
     say "xcodegen 설치"
     brew install xcodegen
   fi
-  xcodegen --version
+  xcodegen --version || true
 }
 
 generate_project() {

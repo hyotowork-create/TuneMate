@@ -52,8 +52,9 @@ public struct TuningLoopOptions: Codable, Equatable, Sendable {
 
 public enum TuningLoop {
     /// 검증 응답(재측정 평균)을 회차에 기록하고 판정한다.
+    /// `excludedDips` 는 보정 계산이 제외한 딥 구간(`AutoEQResult.excludedDips`). 넘기면 예상 잔차와 같은 구간으로 실측 잔차를 낸다.
     public static func verify(iteration: inout TuningIteration, verified: FrequencyResponse, target: TargetCurve, predicted: FrequencyResponse,
-                              autoEQ: AutoEQOptions, previous: TuningIteration?, options: TuningLoopOptions) -> TuningVerdict {
+                              autoEQ: AutoEQOptions, excludedDips: [ClosedRange<Double>] = [], previous: TuningIteration?, options: TuningLoopOptions) -> TuningVerdict {
         let grid = predicted.frequencies
         let targetResp = target.response(on: grid)
         let smoothed = verified.smoothed(fractionOfOctave: autoEQ.smoothingFraction)
@@ -61,7 +62,7 @@ public enum TuningLoop {
         let aligned = smoothed.offset(by: offset)
         // 예상 곡선도 같은 대역 평균으로 정렬해 '모양'만 비교한다
         let predictedAligned = predicted.offset(by: targetResp.meanDB(in: autoEQ.levelMatchBand) - predicted.meanDB(in: autoEQ.levelMatchBand))
-        let mask = grid.map { $0 >= autoEQ.minFrequencyHz && $0 <= autoEQ.maxFrequencyHz }
+        let mask = AutoEQ.evaluationMask(grid: grid, options: autoEQ, excludedDips: excludedDips)
         let residual = rms(aligned.subtracting(targetResp).magnitudesDB, mask: mask)
         let predErr = rms(aligned.subtracting(predictedAligned).magnitudesDB, mask: mask)
         iteration.verifiedRMSDB = residual

@@ -30,7 +30,7 @@ TuneMate/
 │  ├─ Persistence/ 측정 세션·설정 JSON 저장소
 │  └─ Resources/dm248-protocol.yaml   DM24.8 프로토콜 명세 템플릿 (status: unverified)
 ├─ Sources/TuneMateApp/          SwiftUI 화면: 측정·보정·하울링·AI 대화·믹서·설정 + 승인 시트
-├─ Tests/TuneMateCoreTests/      Swift Testing 59개 (DSP 정확도, AutoEQ, 하울링, 안전 게이트, 프로토콜 코덱, OSC/RCP, AI 공급자, 종단 파이프라인)
+├─ Tests/TuneMateCoreTests/      Swift Testing 61개 (DSP 정확도, AutoEQ, 하울링, 안전 게이트, 프로토콜 코덱, OSC/RCP, AI 공급자, 종단 파이프라인)
 └─ docs/                         아키텍처·현장 절차·진행 기록
 ```
 
@@ -65,7 +65,7 @@ brew install xcodegen && xcodegen generate && open TuneMate.xcodeproj
 ```
 - 타깃: `TuneMate_iOS`(iPhone·iPad), `TuneMate_macOS`. 2026-10-30 기준 iPhone 17·iPad Pro 11-inch 시뮬레이터 빌드와 iPhone 실행을 확인했습니다.
 - 명령줄: `xcodebuild -project TuneMate.xcodeproj -scheme TuneMate_iOS -destination 'platform=iOS Simulator,name=iPhone 17' build`
-- 테스트는 SwiftPM으로 돌립니다 (`swift test`, 59개). Xcode 안에서는 Test Navigator의 패키지 테스트(TuneMateCoreTests)로 실행합니다.
+- 테스트는 SwiftPM으로 돌립니다 (`swift test`, 61개). Xcode 안에서는 Test Navigator의 패키지 테스트(TuneMateCoreTests)로 실행합니다.
 - `project.yml`에 마이크·로컬 네트워크 권한 문구, 샌드박스·Keychain 권한이 들어 있습니다. TestFlight 배포 시 `DEVELOPMENT_TEAM`을 채웁니다. iOS에서 믹서 UDP 브로드캐스트 탐색을 쓰려면 `com.apple.developer.networking.multicast` 권한을 Apple에 신청해 주석을 풉니다.
 
 **Command Line Tools만 있는 Mac (예비 경로)**

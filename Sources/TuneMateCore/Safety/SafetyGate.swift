@@ -30,6 +30,7 @@ public enum SafetyGate {
         }
 
         var muteCount = 0
+        var missingBands: [String: (have: Int, want: Int)] = [:]   // 대상별: 믹서에 없는 EQ 밴드
         for r in ChangeResolver.resolve(proposal.changes, against: state) {
             let c = r.change
             if c.alwaysRequiresConfirmation { approval.append("\(r.summary): 항상 사람 확인이 필요한 변경입니다.") }
@@ -48,6 +49,11 @@ public enum SafetyGate {
             case .eqBand(let t, let b, _, let g, _, let on):
                 if abs(g) > policy.maxEQGainAbsDB + 1e-9 { denied.append(String(format: "%@: EQ 게인 한도 ±%.0f dB를 넘습니다.", r.summary, policy.maxEQGainAbsDB)) }
                 let cur = state.eq(of: t)?.first { $0.index == b }
+                // 믹서가 가진 밴드 수보다 큰 밴드 번호: 중간까지만 쓰이고 실패하지 않도록 통째로 막는다.
+                if cur == nil, let bands = state.eq(of: t), !bands.isEmpty {
+                    let key = "\(t)"
+                    missingBands[key] = (bands.count, max(b, missingBands[key]?.want ?? 0))
+                }
                 let curG = (cur?.enabled ?? false) ? (cur?.gainDB ?? 0) : 0
                 if on && g - curG > policy.maxIncreaseStepDB + 1e-9 { approval.append(String(format: "%@: 부스트 폭 +%.1f dB (한도 +%.0f dB).", r.summary, g - curG, policy.maxIncreaseStepDB)) }
                 if on && g < policy.notch.maxDepthDB - 1e-9 { approval.append(String(format: "%@: 노치 한도 %.0f dB보다 깊습니다.", r.summary, policy.notch.maxDepthDB)) }
@@ -55,6 +61,9 @@ public enum SafetyGate {
                 approval.append("\(r.summary): 프리앰프 게인은 사람 확인 뒤 바꿉니다.")
             default: break
             }
+        }
+        for (target, m) in missingBands.sorted(by: { $0.key < $1.key }) {
+            denied.append("\(target) EQ는 \(m.have)밴드인데 \(m.want)밴드까지 쓰려 합니다. 밴드 수를 \(m.have) 이하로 줄여 다시 계산하세요.")
         }
         if muteCount > policy.maxMutesPerProposal { approval.append("한 번에 \(muteCount)개 채널을 뮤트합니다 (한도 \(policy.maxMutesPerProposal)개).") }
 

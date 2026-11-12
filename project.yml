@@ -31,6 +31,11 @@ targets:
       path: Resources/Info.plist
       properties:
         CFBundleDisplayName: 튠메이트
+        # 앱 화면이 한국어이므로 번들도 한국어로 선언한다 (없으면 날짜·시스템 버튼이 영어로 나온다).
+        CFBundleDevelopmentRegion: ko
+        CFBundleLocalizations: [ko]
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         NSMicrophoneUsageDescription: 예배당 음향 측정과 하울링 검출을 위해 측정마이크 입력을 사용합니다.
         NSLocalNetworkUsageDescription: 같은 네트워크의 디지털 믹서(DM24.8, X32, XR18, Yamaha DM)를 찾고 제어합니다.
         NSBonjourServices: ["_osc._udp", "_http._tcp", "_tunemate._tcp", "_tunemate._udp"]

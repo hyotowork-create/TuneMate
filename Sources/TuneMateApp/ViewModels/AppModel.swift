@@ -337,16 +337,28 @@ final class AppModel: ObservableObject {
             return .denied(reasons: [text])
         }
         do {
-            let out = try await executor.submit(proposal, approved: approved)
+            var out = try await executor.submit(proposal, approved: approved)
+            // 제안 모드·한도 초과: 승인 시트를 띄우고, 승인되면 여기서 실제로 적용한다.
+            // (예전에는 화면이 시트만 띄우고 승인 결과를 아무도 적용하지 않았다.)
+            if case .awaitingApproval(let resolved, let reasons) = out {
+                if await requestApproval(resolved, reasons: reasons) {
+                    out = try await executor.submit(resolved, approved: true)
+                } else {
+                    out = .denied(reasons: ["승인하지 않아 적용하지 않았습니다."])
+                }
+            }
             await refreshState()
             return out
-        } catch { lastError = "\(error)"; return nil }
+        } catch { lastError = "\(error)"; await refreshState(); return nil }
     }
 
     // MARK: 승인
 
     private func requestApproval(_ p: ChangeProposal, reasons: [String]) async -> Bool {
-        await withCheckedContinuation { cont in
+        // 이미 떠 있는 승인 요청이 있으면 거절로 끝내고 새 요청을 띄운다 (기다리는 쪽이 영원히 멈추지 않게).
+        approvalContinuation?.resume(returning: false)
+        approvalContinuation = nil
+        return await withCheckedContinuation { cont in
             approvalContinuation = cont
             pendingApproval = PendingApproval(proposal: p, reasons: reasons)
         }
@@ -357,6 +369,12 @@ final class AppModel: ObservableObject {
         approvalContinuation?.resume(returning: ok)
         approvalContinuation = nil
         Task { await refreshState() }
+    }
+
+    /// 승인 시트를 버튼 없이 쓸어내려 닫은 경우: 거절로 처리한다.
+    func approvalSheetDismissed() {
+        guard pendingApproval == nil, approvalContinuation != nil else { return }
+        resolveApproval(false)
     }
 
     // MARK: 측정
@@ -524,7 +542,7 @@ final class AppModel: ObservableObject {
               var it = currentSession.iterations.last else { isVerificationMode = false; return }
         let previous = currentSession.iterations.count >= 2 ? currentSession.iterations[currentSession.iterations.count - 2] : nil
         let verdict = TuningLoop.verify(iteration: &it, verified: avg, target: currentSession.target, predicted: r.predicted,
-                                        autoEQ: currentSession.autoEQOptions, previous: previous, options: TuningLoopOptions())
+                                        autoEQ: currentSession.autoEQOptions, excludedDips: r.excludedDips, previous: previous, options: TuningLoopOptions())
         currentSession.iterations[currentSession.iterations.count - 1] = it
         currentSession.verification = it.verifiedResponse
         // 관찰한 모델 오차(실측−예상)를 다음 계산에 반영

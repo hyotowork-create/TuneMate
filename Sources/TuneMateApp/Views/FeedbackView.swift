@@ -102,6 +102,5 @@ struct FeedbackView: View {
 
     func show(_ out: ExecutionOutcome) {
         outcome = outcomeDescription(out)
-        if case .awaitingApproval(let p, let r) = out { model.pendingApproval = AppModel.PendingApproval(proposal: p, reasons: r) }
     }
 }

@@ -20,6 +20,13 @@ struct AnalysisView: View {
                         Stepper("밴드 수 \(model.settings.autoEQ.maxFilters)", value: $model.settings.autoEQ.maxFilters, in: 1...12)
                         Button("다시 계산") { model.saveSettings(); Task { await model.recompute() } }.buttonStyle(.bordered)
                     }
+                    // 연결된 믹서의 메인 EQ 밴드 수보다 많이 계산했으면 적용이 막히므로 미리 알려 준다.
+                    if model.connectionStatus == .connected, let n = model.mixerState?.eq(of: .mainLR)?.count, n > 0, r.filters.count > n {
+                        AdaptiveStack {
+                            InfoNote(text: "이 믹서의 메인 EQ는 \(n)밴드입니다. 지금 보정값은 \(r.filters.count)밴드라 믹서에 적용할 수 없습니다.", tint: .orange)
+                            Button("믹서에 맞추기 (\(n)밴드)") { model.settings.autoEQ.maxFilters = n; model.saveSettings(); Task { await model.recompute() } }.buttonStyle(.bordered)
+                        }
+                    }
                 }
                 SectionCard(title: "보정값", subtitle: "대상 출력 · 밴드 · 주파수 · 게인 · Q — 공식 앱에 그대로 입력") {
                     let rows = EQAssignment.fromResult(r)
@@ -108,7 +115,6 @@ struct AnalysisView: View {
     func show(_ out: ExecutionOutcome) async {
         outcomeText = outcomeDescription(out)
         if case .applied = out { await model.markApplied() }
-        if case .awaitingApproval(let p, let reasons) = out { model.pendingApproval = AppModel.PendingApproval(proposal: p, reasons: reasons) }
     }
 
     func copy(_ s: String) {
